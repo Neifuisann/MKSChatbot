@@ -2,6 +2,9 @@ import Link from "next/link";
 import { ArrowLeft, Check, LockKeyhole } from "lucide-react";
 
 import { BrandMark } from "@/components/brand-mark";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import { signInWithGoogle } from "./actions";
 
 type LoginPageProps = {
   searchParams: Promise<{ error?: string }>;
@@ -9,6 +12,14 @@ type LoginPageProps = {
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const { error } = await searchParams;
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    redirect("/chat");
+  }
 
   return (
     <main className="grid min-h-screen bg-[#f7f3e9] text-[#24352d] lg:grid-cols-[0.9fr_1.1fr]">
@@ -44,8 +55,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             </p>
           )}
 
+          <form action={signInWithGoogle}>
           <button
-            type="button"
+            type="submit"
             className="mt-8 flex h-12 w-full items-center justify-center gap-3 rounded-full border border-[#d7d1c5] bg-white text-sm font-medium text-[#2c3d34] shadow-[0_8px_24px_rgba(53,62,54,0.07)] transition-colors hover:bg-[#fbfaf6]"
           >
             <svg
@@ -72,6 +84,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             </svg>
             Tiếp tục với Google
           </button>
+          </form>
 
           <div className="my-7 flex items-center gap-3 text-[11px] uppercase tracking-[0.16em] text-[#9a9f9b]">
             <span className="h-px flex-1 bg-[#ded9cd]" />
