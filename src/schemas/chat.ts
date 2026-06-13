@@ -17,4 +17,10 @@ export const chatRequestSchema = z.object({
   messages: z.array(chatMessageSchema).min(1).max(100),
 });
 
+export const chatSessionIdSchema = z.uuid();
+
+export const chatHistoryQuerySchema = z.object({
+  offset: z.coerce.number().int().min(0).max(10_000).default(0),
+});
+
 export type ChatMessageInput = z.infer<typeof chatMessageSchema>;

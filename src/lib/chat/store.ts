@@ -16,6 +16,23 @@ export type ChatHistoryItem = {
   updatedAt: string;
 };
 
+export async function deleteChatSession(input: {
+  chatId: string;
+  userId: string;
+}): Promise<boolean> {
+  const admin = createSupabaseAdminClient();
+  const { data, error } = await admin
+    .from("chat_sessions")
+    .delete()
+    .eq("id", input.chatId)
+    .eq("user_id", input.userId)
+    .select("id")
+    .maybeSingle();
+
+  if (error) throw new Error(`chat session delete failed: ${error.message}`);
+  return Boolean(data);
+}
+
 export async function assertChatOwnership(
   chatId: string,
   userId: string,
