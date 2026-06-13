@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 
-import { deleteChatSession } from "@/lib/chat/store";
+import { deleteChatSession, updateChatSession } from "@/lib/chat/store";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { chatHistoryQuerySchema, chatSessionIdSchema } from "@/schemas/chat";
+import {
+  chatHistoryQuerySchema,
+  chatSessionIdSchema,
+  chatSessionUpdateSchema,
+} from "@/schemas/chat";
 
 const CHAT_HISTORY_PAGE_SIZE = 12;
 
@@ -25,7 +29,8 @@ export async function GET(request: Request): Promise<Response> {
 
   const { data, error } = await supabase
     .from("chat_sessions")
-    .select("id, title")
+    .select("id, title, custom_title, is_starred")
+    .order("is_starred", { ascending: false })
     .order("updated_at", { ascending: false })
     .order("id")
     .range(parsed.data.offset, parsed.data.offset + CHAT_HISTORY_PAGE_SIZE);
@@ -37,8 +42,47 @@ export async function GET(request: Request): Promise<Response> {
 
   return NextResponse.json({
     hasMore: (data?.length ?? 0) > CHAT_HISTORY_PAGE_SIZE,
-    items: (data ?? []).slice(0, CHAT_HISTORY_PAGE_SIZE),
+    items: (data ?? []).slice(0, CHAT_HISTORY_PAGE_SIZE).map((chat) => ({
+      id: chat.id,
+      isStarred: chat.is_starred,
+      title: chat.custom_title || chat.title,
+    })),
   });
+}
+
+export async function PATCH(request: Request): Promise<Response> {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const parsed = chatSessionUpdateSchema.safeParse(await request.json());
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid chat update" }, { status: 400 });
+  }
+
+  try {
+    const updated = await updateChatSession({
+      chatId: parsed.data.id,
+      userId: user.id,
+      ...(parsed.data.action === "rename"
+        ? { customTitle: parsed.data.title }
+        : { isStarred: parsed.data.isStarred }),
+    });
+
+    if (!updated) {
+      return NextResponse.json({ error: "Chat not found" }, { status: 404 });
+    }
+  } catch (error) {
+    console.error("Failed to update chat session", error);
+    return NextResponse.json({ error: "Unable to update chat" }, { status: 500 });
+  }
+
+  return new Response(null, { status: 204 });
 }
 
 export async function DELETE(request: Request): Promise<Response> {

@@ -25,7 +25,8 @@ export default async function WorkspaceLayout({
     supabase.from("profiles").select("student_id, full_name").eq("user_id", user.id).maybeSingle(),
     supabase
       .from("chat_sessions")
-      .select("id, title")
+      .select("id, title, custom_title, is_starred")
+      .order("is_starred", { ascending: false })
       .order("updated_at", { ascending: false })
       .order("id")
       .limit(CHAT_HISTORY_PAGE_SIZE + 1),
@@ -49,7 +50,8 @@ export default async function WorkspaceLayout({
       <WorkspaceSidebar
         chatHistory={(chatHistory ?? []).slice(0, CHAT_HISTORY_PAGE_SIZE).map((chat) => ({
           id: chat.id,
-          title: chat.title,
+          isStarred: chat.is_starred,
+          title: chat.custom_title || chat.title,
         }))}
         chatHistoryHasMore={(chatHistory?.length ?? 0) > CHAT_HISTORY_PAGE_SIZE}
         user={{

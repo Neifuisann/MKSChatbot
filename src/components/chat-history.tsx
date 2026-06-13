@@ -1,9 +1,9 @@
 "use client";
 
-import { LoaderCircle, Trash2 } from "lucide-react";
+import { LoaderCircle, MoreHorizontal, Pencil, Star, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { type FormEvent, useState } from "react";
 
 import {
   AlertDialog,
@@ -15,10 +15,29 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 export type ChatHistoryItem = {
   id: string;
+  isStarred: boolean;
   title: string;
 };
 
@@ -43,6 +62,8 @@ export function ChatHistory({
   const [previousInitialItems, setPreviousInitialItems] = useState(initialItems);
   const [isLoading, setIsLoading] = useState(false);
   const [deletingChat, setDeletingChat] = useState<ChatHistoryItem>();
+  const [renamingChat, setRenamingChat] = useState<ChatHistoryItem>();
+  const [renameTitle, setRenameTitle] = useState("");
   const [error, setError] = useState<string>();
 
   if (initialItems !== previousInitialItems) {
@@ -106,6 +127,65 @@ export function ChatHistory({
     }
   };
 
+  const starChat = async (chat: ChatHistoryItem) => {
+    setError(undefined);
+    setIsLoading(true);
+
+    try {
+      const response = await fetch("/api/chat/history", {
+        body: JSON.stringify({
+          action: "star",
+          id: chat.id,
+          isStarred: !chat.isStarred,
+        }),
+        headers: { "Content-Type": "application/json" },
+        method: "PATCH",
+      });
+      if (!response.ok) throw new Error("Chat star update failed");
+
+      setChats((current) =>
+        current.map((item) =>
+          item.id === chat.id ? { ...item, isStarred: !item.isStarred } : item,
+        ),
+      );
+      router.refresh();
+    } catch {
+      setError("Không thể cập nhật cuộc trò chuyện. Vui lòng thử lại.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const renameChat = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const title = renameTitle.trim();
+    if (!renamingChat || !title) return;
+
+    setError(undefined);
+    setIsLoading(true);
+
+    try {
+      const response = await fetch("/api/chat/history", {
+        body: JSON.stringify({ action: "rename", id: renamingChat.id, title }),
+        headers: { "Content-Type": "application/json" },
+        method: "PATCH",
+      });
+      if (!response.ok) throw new Error("Chat rename failed");
+
+      setChats((current) =>
+        current.map((chat) =>
+          chat.id === renamingChat.id ? { ...chat, title } : chat,
+        ),
+      );
+      setRenamingChat(undefined);
+      router.refresh();
+    } catch {
+      setError("Không thể đổi tên cuộc trò chuyện. Vui lòng thử lại.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   if (chats.length === 0) {
     return <div className="min-h-0 flex-1" />;
   }
@@ -122,27 +202,78 @@ export function ChatHistory({
         >
           <div className="flex flex-col gap-0.5">
             {chats.map((chat) => (
-              <div className="group relative" key={chat.id}>
+              <div
+                className={cn(
+                  "group relative rounded-xl transition",
+                  pathname === `/chat/${chat.id}`
+                    ? "bg-[#dfddd6] text-[#303832]"
+                    : "text-[#636b66] hover:bg-[#e4e2dc] hover:text-[#303832] has-data-[popup-open]:bg-[#e4e2dc] has-data-[popup-open]:text-[#303832]",
+                )}
+                key={chat.id}
+              >
                 <Link
                   className={cn(
-                    "block truncate rounded-xl py-2 pl-3 pr-10 text-sm transition",
-                    pathname === `/chat/${chat.id}`
-                      ? "bg-[#dfddd6] font-medium text-[#303832]"
-                      : "text-[#636b66] hover:bg-[#e4e2dc] hover:text-[#303832]",
+                    "flex min-w-0 items-center gap-2 rounded-xl py-2 pl-3 pr-10 text-sm",
+                    pathname === `/chat/${chat.id}` && "font-medium",
                   )}
                   href={`/chat/${chat.id}`}
                   title={chat.title}
                 >
-                  {chat.title}
+                  {chat.isStarred && (
+                    <Star className="size-3.5 shrink-0 fill-[#c46b45] text-[#c46b45]" />
+                  )}
+                  <span className="truncate">{chat.title}</span>
                 </Link>
-                <button
-                  aria-label={`Xóa cuộc trò chuyện ${chat.title}`}
-                  className="absolute right-1 top-1/2 grid size-7 -translate-y-1/2 place-items-center rounded-lg text-[#8b5c4d] opacity-100 transition hover:bg-[#f3dfd7] hover:text-[#913f29] focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#a45a43] sm:opacity-0 sm:group-hover:opacity-100"
-                  onClick={() => setDeletingChat(chat)}
-                  type="button"
-                >
-                  <Trash2 className="size-3.5" />
-                </button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <button
+                        aria-label={`Tùy chọn cho cuộc trò chuyện ${chat.title}`}
+                        className="absolute right-1 top-1/2 grid size-7 -translate-y-1/2 place-items-center rounded-lg text-[#6f7772] opacity-100 transition hover:bg-[#d8d5ce] hover:text-[#303832] focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#7c8d82] data-popup-open:bg-[#d8d5ce] data-popup-open:text-[#303832] sm:opacity-0 sm:group-hover:opacity-100 sm:data-popup-open:opacity-100"
+                        type="button"
+                      />
+                    }
+                  >
+                    <MoreHorizontal className="size-4" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    className="w-44 border border-[#d7d3ca] bg-[#fbfaf6] p-1.5 text-[#46504a] shadow-[0_14px_35px_rgba(50,61,53,0.16)]"
+                    side="right"
+                    sideOffset={8}
+                  >
+                    <DropdownMenuGroup>
+                      <DropdownMenuItem
+                        disabled={isLoading}
+                        onClick={() => void starChat(chat)}
+                      >
+                        <Star className={cn(chat.isStarred && "fill-current")} />
+                        {chat.isStarred ? "Bỏ đánh dấu sao" : "Đánh dấu sao"}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        disabled={isLoading}
+                        onClick={() => {
+                          setRenameTitle(chat.title);
+                          setRenamingChat(chat);
+                        }}
+                      >
+                        <Pencil />
+                        Đổi tên
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
+                    <DropdownMenuSeparator className="bg-[#e1ddd5]" />
+                    <DropdownMenuGroup>
+                      <DropdownMenuItem
+                        disabled={isLoading}
+                        onClick={() => setDeletingChat(chat)}
+                        variant="destructive"
+                      >
+                        <Trash2 />
+                        Xóa
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             ))}
           </div>
@@ -165,6 +296,41 @@ export function ChatHistory({
           )}
         </nav>
       </div>
+
+      <Dialog
+        onOpenChange={(open) => {
+          if (!open && !isLoading) setRenamingChat(undefined);
+        }}
+        open={Boolean(renamingChat)}
+      >
+        <DialogContent>
+          <form className="flex flex-col gap-4" onSubmit={renameChat}>
+            <DialogHeader>
+              <DialogTitle>Đổi tên cuộc trò chuyện</DialogTitle>
+              <DialogDescription>
+                Đặt tên ngắn gọn để bạn dễ tìm lại cuộc trò chuyện này.
+              </DialogDescription>
+            </DialogHeader>
+            <Input
+              aria-label="Tên cuộc trò chuyện"
+              autoFocus
+              disabled={isLoading}
+              maxLength={160}
+              onChange={(event) => setRenameTitle(event.target.value)}
+              value={renameTitle}
+            />
+            <DialogFooter>
+              <Button
+                disabled={!renameTitle.trim() || isLoading}
+                type="submit"
+              >
+                {isLoading && <LoaderCircle data-icon="inline-start" className="animate-spin" />}
+                {isLoading ? "Đang lưu..." : "Lưu tên"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog
         onOpenChange={(open) => {

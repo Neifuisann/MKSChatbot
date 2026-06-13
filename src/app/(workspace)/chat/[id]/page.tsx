@@ -25,7 +25,11 @@ export default async function ConversationPage({
   const [{ data: profile }, { data: session }, { data: storedMessages }] =
     await Promise.all([
       supabase.from("profiles").select("student_id, full_name").eq("user_id", user.id).maybeSingle(),
-      supabase.from("chat_sessions").select("title").eq("id", id).maybeSingle(),
+      supabase
+        .from("chat_sessions")
+        .select("title, custom_title, is_starred, share_token")
+        .eq("id", id)
+        .maybeSingle(),
       supabase.from("chat_messages").select("id, role, parts").eq("session_id", id).order("turn_index").order("created_at"),
     ]);
 
@@ -46,7 +50,9 @@ export default async function ConversationPage({
     <ChatWorkspace
       chatId={id}
       initialMessages={(storedMessages ?? []) as UIMessage[]}
-      title={session?.title ?? "MKS Assistant"}
+      initialIsStarred={session?.is_starred ?? false}
+      initialShareToken={session?.share_token}
+      title={session?.custom_title || session?.title || "MKS Assistant"}
       user={{
         avatarUrl,
         email: user.email,

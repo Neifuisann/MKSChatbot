@@ -23,4 +23,23 @@ export const chatHistoryQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).max(10_000).default(0),
 });
 
+export const chatSessionUpdateSchema = z.discriminatedUnion("action", [
+  z.object({
+    action: z.literal("rename"),
+    id: chatSessionIdSchema,
+    title: z.string().trim().min(1).max(160),
+  }),
+  z.object({
+    action: z.literal("star"),
+    id: chatSessionIdSchema,
+    isStarred: z.boolean(),
+  }),
+]);
+
+export const chatShareSchema = z.object({
+  id: chatSessionIdSchema,
+});
+
+export const chatShareTokenSchema = z.uuid();
+
 export type ChatMessageInput = z.infer<typeof chatMessageSchema>;

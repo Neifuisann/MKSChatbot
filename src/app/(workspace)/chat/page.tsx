@@ -36,6 +36,7 @@ export default async function ChatPage() {
   return (
     <ChatWorkspace
       initialMessages={[]}
+      initialIsStarred={false}
       title="MKS Assistant"
       user={{
         avatarUrl,

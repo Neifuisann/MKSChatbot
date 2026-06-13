@@ -7,14 +7,20 @@ import {
   ChevronDown,
   Copy,
   FlaskConical,
+  Globe2,
   LoaderCircle,
+  LockKeyhole,
   Mic,
   Paperclip,
+  Pencil,
   PenLine,
   RefreshCw,
   Search,
+  Share2,
   Sparkles,
   Square,
+  Star,
+  Trash2,
   Wrench,
   X,
 } from "lucide-react";
@@ -25,12 +31,42 @@ import remarkGfm from "remark-gfm";
 import { DefaultChatTransport, generateId, type UIMessage } from "ai";
 
 import type { WorkspaceUser } from "@/components/workspace-sidebar";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import { getMessageText } from "@/lib/chat/messages";
 import { cn } from "@/lib/utils";
 
 type ChatWorkspaceProps = {
   chatId?: string;
+  initialIsStarred: boolean;
   initialMessages: UIMessage[];
+  initialShareToken?: string | null;
   title: string;
   user: WorkspaceUser;
 };
@@ -137,10 +173,27 @@ function Composer({
   );
 }
 
-export function ChatWorkspace({ chatId, initialMessages, title, user }: ChatWorkspaceProps) {
+export function ChatWorkspace({
+  chatId,
+  initialIsStarred,
+  initialMessages,
+  initialShareToken,
+  title,
+  user,
+}: ChatWorkspaceProps) {
   const router = useRouter();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activeChatId, setActiveChatId] = useState(chatId);
+  const [currentTitle, setCurrentTitle] = useState(title);
+  const [isStarred, setIsStarred] = useState(initialIsStarred);
+  const [shareToken, setShareToken] = useState(initialShareToken);
+  const [isShareOpen, setIsShareOpen] = useState(false);
+  const [isRenameOpen, setIsRenameOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isActionLoading, setIsActionLoading] = useState(false);
+  const [renameTitle, setRenameTitle] = useState(title);
+  const [actionError, setActionError] = useState<string>();
+  const [isLinkCopied, setIsLinkCopied] = useState(false);
   const [input, setInput] = useState("");
   const [editingId, setEditingId] = useState<string>();
   const [editText, setEditText] = useState("");
@@ -191,15 +244,172 @@ export function ChatWorkspace({ chatId, initialMessages, title, user }: ChatWork
     window.setTimeout(() => setCopiedId(undefined), 1500);
   };
 
+  const updateChat = async (
+    body:
+      | { action: "rename"; id: string; title: string }
+      | { action: "star"; id: string; isStarred: boolean },
+  ) => {
+    const response = await fetch("/api/chat/history", {
+      body: JSON.stringify(body),
+      headers: { "Content-Type": "application/json" },
+      method: "PATCH",
+    });
+    if (!response.ok) throw new Error("Chat update failed");
+  };
+
+  const toggleStar = async () => {
+    if (!chatId) return;
+    setActionError(undefined);
+    setIsActionLoading(true);
+    try {
+      await updateChat({ action: "star", id: chatId, isStarred: !isStarred });
+      setIsStarred((value) => !value);
+      router.refresh();
+    } catch {
+      setActionError("Không thể cập nhật cuộc trò chuyện.");
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const renameChat = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const nextTitle = renameTitle.trim();
+    if (!chatId || !nextTitle) return;
+    setActionError(undefined);
+    setIsActionLoading(true);
+    try {
+      await updateChat({ action: "rename", id: chatId, title: nextTitle });
+      setCurrentTitle(nextTitle);
+      setIsRenameOpen(false);
+      router.refresh();
+    } catch {
+      setActionError("Không thể đổi tên cuộc trò chuyện.");
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const deleteChat = async () => {
+    if (!chatId) return;
+    setActionError(undefined);
+    setIsActionLoading(true);
+    try {
+      const response = await fetch(`/api/chat/history?id=${encodeURIComponent(chatId)}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error("Chat deletion failed");
+      router.push("/chat");
+      router.refresh();
+    } catch {
+      setActionError("Không thể xóa cuộc trò chuyện.");
+      setIsActionLoading(false);
+    }
+  };
+
+  const enableSharing = async () => {
+    if (!chatId) return;
+    setActionError(undefined);
+    setIsActionLoading(true);
+    try {
+      const response = await fetch("/api/chat/share", {
+        body: JSON.stringify({ id: chatId }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      });
+      if (!response.ok) throw new Error("Share creation failed");
+      const result = (await response.json()) as { token: string };
+      setShareToken(result.token);
+    } catch {
+      setActionError("Không thể tạo liên kết chia sẻ.");
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const disableSharing = async () => {
+    if (!chatId) return;
+    setActionError(undefined);
+    setIsActionLoading(true);
+    try {
+      const response = await fetch("/api/chat/share", {
+        body: JSON.stringify({ id: chatId }),
+        headers: { "Content-Type": "application/json" },
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error("Share revocation failed");
+      setShareToken(undefined);
+    } catch {
+      setActionError("Không thể tắt liên kết chia sẻ.");
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const copyShareLink = async () => {
+    if (!shareToken) return;
+    await navigator.clipboard.writeText(`${window.location.origin}/share/${shareToken}`);
+    setIsLinkCopied(true);
+    window.setTimeout(() => setIsLinkCopied(false), 1500);
+  };
+
   return (
     <section className="relative flex min-w-0 flex-1 flex-col">
       <header className="flex h-16 shrink-0 items-center justify-between px-5 sm:px-7">
-        <button className="flex max-w-[70%] items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-[#616a64] transition hover:bg-[#ebe8e1]" type="button">
-          <span className="truncate">{title}</span>
-          <ChevronDown className="size-3.5 shrink-0" />
-        </button>
-        <button aria-label="Tạo cuộc trò chuyện mới" className="grid size-9 place-items-center rounded-lg text-[#626b65] transition hover:bg-[#ebe8e1]" onClick={() => router.push("/chat")} type="button">
-          <PenLine className="size-4.5" />
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            disabled={!chatId}
+            render={
+              <button
+                className="flex max-w-[70%] items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-[#616a64] transition hover:bg-[#ebe8e1] data-popup-open:bg-[#ebe8e1]"
+                type="button"
+              />
+            }
+          >
+            <span className="truncate">{currentTitle}</span>
+            <ChevronDown className="size-3.5 shrink-0" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="start"
+            className="w-44 border border-[#d7d3ca] bg-[#fbfaf6] p-1.5 text-[#46504a] shadow-[0_14px_35px_rgba(50,61,53,0.16)]"
+          >
+            <DropdownMenuGroup>
+              <DropdownMenuItem disabled={isActionLoading} onClick={() => void toggleStar()}>
+                <Star className={cn(isStarred && "fill-current")} />
+                {isStarred ? "Bỏ đánh dấu sao" : "Đánh dấu sao"}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={isActionLoading}
+                onClick={() => {
+                  setRenameTitle(currentTitle);
+                  setIsRenameOpen(true);
+                }}
+              >
+                <Pencil />
+                Đổi tên
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator className="bg-[#e1ddd5]" />
+            <DropdownMenuGroup>
+              <DropdownMenuItem
+                disabled={isActionLoading}
+                onClick={() => setIsDeleteOpen(true)}
+                variant="destructive"
+              >
+                <Trash2 />
+                Xóa
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <button
+          aria-label="Chia sẻ cuộc trò chuyện"
+          className="grid size-9 place-items-center rounded-lg text-[#626b65] transition hover:bg-[#ebe8e1] disabled:cursor-not-allowed disabled:opacity-40"
+          disabled={!chatId}
+          onClick={() => setIsShareOpen(true)}
+          type="button"
+        >
+          <Share2 className="size-4.5" />
         </button>
       </header>
 
@@ -271,6 +481,111 @@ export function ChatWorkspace({ chatId, initialMessages, title, user }: ChatWork
           </div>
         </>
       )}
+
+      <Dialog onOpenChange={setIsShareOpen} open={isShareOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Chia sẻ cuộc trò chuyện</DialogTitle>
+            <DialogDescription>
+              Bất kỳ ai có liên kết công khai đều có thể xem cuộc trò chuyện ở chế độ chỉ đọc.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="overflow-hidden rounded-xl border border-[#dedbd2]">
+            <button
+              className={cn(
+                "flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-[#f0eee8]",
+                !shareToken && "bg-[#eeece6]",
+              )}
+              disabled={isActionLoading}
+              onClick={() => void disableSharing()}
+              type="button"
+            >
+              <LockKeyhole className="size-4.5 shrink-0 text-[#68716b]" />
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-medium">Giữ riêng tư</span>
+                <span className="block text-xs text-[#7b827d]">Chỉ bạn có quyền truy cập</span>
+              </span>
+              {!shareToken && <Check className="size-4 text-[#315c48]" />}
+            </button>
+            <button
+              className={cn(
+                "flex w-full items-center gap-3 border-t border-[#dedbd2] px-4 py-3 text-left transition hover:bg-[#f0eee8]",
+                shareToken && "bg-[#eeece6]",
+              )}
+              disabled={isActionLoading}
+              onClick={() => void enableSharing()}
+              type="button"
+            >
+              <Globe2 className="size-4.5 shrink-0 text-[#68716b]" />
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-medium">Tạo liên kết công khai</span>
+                <span className="block text-xs text-[#7b827d]">Ai có liên kết đều có thể xem</span>
+              </span>
+              {shareToken && <Check className="size-4 text-[#315c48]" />}
+            </button>
+          </div>
+          {shareToken && (
+            <div className="flex gap-2 rounded-xl border border-[#dedbd2] bg-[#eeece6] p-2">
+              <Input
+                aria-label="Liên kết chia sẻ"
+                readOnly
+                value={`/share/${shareToken}`}
+              />
+              <Button onClick={() => void copyShareLink()} type="button">
+                {isLinkCopied ? "Đã sao chép" : "Sao chép"}
+              </Button>
+            </div>
+          )}
+          {actionError && <p className="text-sm text-[#98513d]">{actionError}</p>}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog onOpenChange={setIsRenameOpen} open={isRenameOpen}>
+        <DialogContent>
+          <form className="flex flex-col gap-4" onSubmit={renameChat}>
+            <DialogHeader>
+              <DialogTitle>Đổi tên cuộc trò chuyện</DialogTitle>
+              <DialogDescription>Đặt tên ngắn gọn để dễ tìm lại cuộc trò chuyện.</DialogDescription>
+            </DialogHeader>
+            <Input
+              aria-label="Tên cuộc trò chuyện"
+              autoFocus
+              disabled={isActionLoading}
+              maxLength={160}
+              onChange={(event) => setRenameTitle(event.target.value)}
+              value={renameTitle}
+            />
+            <DialogFooter>
+              <Button disabled={!renameTitle.trim() || isActionLoading} type="submit">
+                {isActionLoading && <LoaderCircle data-icon="inline-start" className="animate-spin" />}
+                {isActionLoading ? "Đang lưu..." : "Lưu tên"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog onOpenChange={setIsDeleteOpen} open={isDeleteOpen}>
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xóa cuộc trò chuyện?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cuộc trò chuyện “{currentTitle}” và toàn bộ tin nhắn sẽ bị xóa vĩnh viễn.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isActionLoading}>Hủy</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isActionLoading}
+              onClick={() => void deleteChat()}
+              variant="destructive"
+            >
+              {isActionLoading && <LoaderCircle data-icon="inline-start" className="animate-spin" />}
+              {isActionLoading ? "Đang xóa..." : "Xóa"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   );
 }
