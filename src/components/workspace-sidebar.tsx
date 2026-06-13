@@ -39,8 +39,8 @@ const primaryItems = [
 ] as const;
 
 const schoolItems = [
-  { icon: FlaskConical, label: "Gửi ý tưởng nghiên cứu" },
-  { icon: Wrench, label: "Đăng ký sử dụng Makerspace" },
+  { href: "/research-ideas", icon: FlaskConical, label: "Gửi ý tưởng nghiên cứu" },
+  { href: undefined, icon: Wrench, label: "Đăng ký sử dụng Makerspace" },
 ];
 
 function getInitials(name: string): string {
@@ -197,20 +197,39 @@ export function WorkspaceSidebar({ chatHistory, user }: WorkspaceSidebarProps) {
       <div className="my-4 border-t border-[#d9d6ce]" />
 
       <nav className="space-y-1" aria-label="School actions">
-        {schoolItems.map(({ icon: Icon, label }) => (
-          <button
-            className={cn(
+        {schoolItems.map(({ href, icon: Icon, label }) => {
+          const className = cn(
               "flex min-h-10 w-full items-center rounded-xl text-left text-sm leading-5 text-[#5f6862] transition hover:bg-[#e4e2dc] hover:text-[#313a35]",
               isExpanded ? "gap-3 px-3 py-2" : "justify-center",
-            )}
-            key={label}
-            title={isExpanded ? undefined : label}
-            type="button"
-          >
-            <Icon className="size-[17px] shrink-0" />
-            {isExpanded && <span>{label}</span>}
-          </button>
-        ))}
+              pathname === href && "bg-[#dfddd6] font-medium text-[#2f3933]",
+            );
+          const content = (
+            <>
+              <Icon className="size-[17px] shrink-0" />
+              {isExpanded && <span>{label}</span>}
+            </>
+          );
+
+          return href ? (
+            <Link
+              className={className}
+              href={href}
+              key={label}
+              title={isExpanded ? undefined : label}
+            >
+              {content}
+            </Link>
+          ) : (
+            <button
+              className={className}
+              key={label}
+              title={isExpanded ? undefined : label}
+              type="button"
+            >
+              {content}
+            </button>
+          );
+        })}
       </nav>
 
       <div className="mt-auto pt-4">
