@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { ArrowRight, LogOut, ShieldCheck } from "lucide-react";
+import { ArrowRight, ShieldCheck } from "lucide-react";
 import { redirect } from "next/navigation";
 
-import { BrandMark } from "@/components/brand-mark";
+import { AuthenticatedHeader } from "@/components/authenticated-header";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -24,20 +24,7 @@ export default async function ChatPage() {
 
   return (
     <main className="min-h-screen bg-[#f7f3e9] px-5 py-5 text-[#24352d] sm:px-8 lg:px-12">
-      <header className="mx-auto flex max-w-6xl items-center justify-between">
-        <Link href="/">
-          <BrandMark />
-        </Link>
-        <form action="/auth/signout" method="post">
-          <button
-            type="submit"
-            className="flex h-10 items-center gap-2 rounded-full border border-[#d6d0c3] bg-[#fbf9f3] px-4 text-xs font-medium transition-colors hover:bg-white"
-          >
-            <LogOut className="size-3.5" />
-            Đăng xuất
-          </button>
-        </form>
-      </header>
+      <AuthenticatedHeader user={user} />
 
       <section className="mx-auto flex min-h-[calc(100vh-80px)] max-w-3xl flex-col items-center justify-center py-16 text-center">
         <span className="grid size-12 place-items-center rounded-2xl bg-[#e1ece2] text-[#356249]">
