@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import { ChatWorkspace } from "@/components/chat-workspace";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -14,5 +15,34 @@ export default async function ChatPage() {
     redirect("/login");
   }
 
-  redirect(`/chat/${crypto.randomUUID()}`);
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("student_id, full_name")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const metadataName =
+    typeof user.user_metadata.full_name === "string"
+      ? user.user_metadata.full_name
+      : typeof user.user_metadata.name === "string"
+        ? user.user_metadata.name
+        : undefined;
+  const avatarUrl =
+    typeof user.user_metadata.avatar_url === "string"
+      ? user.user_metadata.avatar_url
+      : typeof user.user_metadata.picture === "string"
+        ? user.user_metadata.picture
+        : undefined;
+
+  return (
+    <ChatWorkspace
+      initialMessages={[]}
+      title="MKS Assistant"
+      user={{
+        avatarUrl,
+        email: user.email,
+        name: profile?.full_name || metadataName || user.email || "MKS Student",
+        studentId: profile?.student_id,
+      }}
+    />
+  );
 }

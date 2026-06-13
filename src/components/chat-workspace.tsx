@@ -29,7 +29,7 @@ import { getMessageText } from "@/lib/chat/messages";
 import { cn } from "@/lib/utils";
 
 type ChatWorkspaceProps = {
-  chatId: string;
+  chatId?: string;
   initialMessages: UIMessage[];
   title: string;
   user: WorkspaceUser;
@@ -140,6 +140,7 @@ function Composer({
 export function ChatWorkspace({ chatId, initialMessages, title, user }: ChatWorkspaceProps) {
   const router = useRouter();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [activeChatId, setActiveChatId] = useState(chatId);
   const [input, setInput] = useState("");
   const [editingId, setEditingId] = useState<string>();
   const [editText, setEditText] = useState("");
@@ -148,11 +149,10 @@ export function ChatWorkspace({ chatId, initialMessages, title, user }: ChatWork
 
   const { error, messages, regenerate, sendMessage, status, stop } = useChat({
     generateId,
-    id: chatId,
+    ...(chatId ? { id: chatId } : {}),
     messages: initialMessages,
     transport: new DefaultChatTransport({
       api: "/api/chat",
-      body: { id: chatId },
     }),
     onFinish: () => router.refresh(),
   });
@@ -169,15 +169,20 @@ export function ChatWorkspace({ chatId, initialMessages, title, user }: ChatWork
   const submit = async () => {
     const text = input.trim();
     if (!text || isBusy) return;
+    const nextChatId = activeChatId ?? crypto.randomUUID();
+    if (!activeChatId) {
+      setActiveChatId(nextChatId);
+      window.history.replaceState(null, "", `/chat/${nextChatId}`);
+    }
     setInput("");
-    await sendMessage({ text });
+    await sendMessage({ text }, { body: { id: nextChatId } });
   };
 
   const submitEdit = async (messageId: string) => {
     const text = editText.trim();
-    if (!text || isBusy) return;
+    if (!text || isBusy || !activeChatId) return;
     setEditingId(undefined);
-    await sendMessage({ messageId, text });
+    await sendMessage({ messageId, text }, { body: { id: activeChatId } });
   };
 
   const copyMessage = async (message: UIMessage) => {
@@ -248,7 +253,7 @@ export function ChatWorkspace({ chatId, initialMessages, title, user }: ChatWork
                         <div className="prose prose-stone max-w-none text-[15px] leading-7 text-[#303832] prose-headings:font-serif prose-headings:text-[#303832] prose-a:text-[#315c48] prose-pre:overflow-x-auto prose-pre:rounded-xl prose-pre:bg-[#e9e6df] prose-pre:text-[#303832]">
                           {text ? <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown> : <LoaderCircle className="size-5 animate-spin text-[#d76d4c]" />}
                         </div>
-                        {text && <MessageActions alwaysVisible copied={copiedId === message.id} onCopy={() => void copyMessage(message)} onRetry={() => void regenerate({ messageId: message.id, body: { id: chatId } })} />}
+                        {text && <MessageActions alwaysVisible copied={copiedId === message.id} onCopy={() => void copyMessage(message)} onRetry={activeChatId ? () => void regenerate({ messageId: message.id, body: { id: activeChatId } }) : undefined} />}
                       </div>
                     )}
                   </article>
