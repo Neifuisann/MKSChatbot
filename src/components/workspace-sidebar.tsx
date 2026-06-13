@@ -42,7 +42,7 @@ const primaryItems = [
 
 const schoolItems = [
   { href: "/research-ideas", icon: FlaskConical, label: "Gửi ý tưởng nghiên cứu" },
-  { href: undefined, icon: Wrench, label: "Đăng ký sử dụng Makerspace" },
+  { href: "/makerspace", icon: Wrench, label: "Đăng ký sử dụng Makerspace" },
 ];
 
 function getInitials(name: string): string {
