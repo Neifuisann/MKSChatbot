@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -28,6 +28,7 @@ export type WorkspaceUser = {
 };
 
 type WorkspaceSidebarProps = {
+  chatHistory: Array<{ id: string; title: string }>;
   user: WorkspaceUser;
 };
 
@@ -62,10 +63,18 @@ function isSafeAvatarUrl(value?: string): value is string {
   }
 }
 
-export function WorkspaceSidebar({ user }: WorkspaceSidebarProps) {
-  const [isExpanded, setIsExpanded] = useState(true);
+export function WorkspaceSidebar({ chatHistory, user }: WorkspaceSidebarProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const initials = getInitials(user.name);
   const pathname = usePathname();
+
+  useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 768px)");
+    const syncSidebar = () => setIsExpanded(desktop.matches);
+    syncSidebar();
+    desktop.addEventListener("change", syncSidebar);
+    return () => desktop.removeEventListener("change", syncSidebar);
+  }, []);
 
   return (
     <aside
@@ -159,6 +168,31 @@ export function WorkspaceSidebar({ user }: WorkspaceSidebarProps) {
           );
         })}
       </nav>
+
+      {isExpanded && chatHistory.length > 0 && (
+        <div className="mt-5 min-h-0">
+          <p className="px-3 text-[11px] font-medium uppercase tracking-[0.08em] text-[#90958f]">
+            Gần đây
+          </p>
+          <nav className="mt-2 space-y-0.5" aria-label="Lịch sử trò chuyện">
+            {chatHistory.map((chat) => (
+              <Link
+                className={cn(
+                  "block truncate rounded-xl px-3 py-2 text-sm transition",
+                  pathname === `/chat/${chat.id}`
+                    ? "bg-[#dfddd6] font-medium text-[#303832]"
+                    : "text-[#636b66] hover:bg-[#e4e2dc] hover:text-[#303832]",
+                )}
+                href={`/chat/${chat.id}`}
+                key={chat.id}
+                title={chat.title}
+              >
+                {chat.title}
+              </Link>
+            ))}
+          </nav>
+        </div>
+      )}
 
       <div className="my-4 border-t border-[#d9d6ce]" />
 

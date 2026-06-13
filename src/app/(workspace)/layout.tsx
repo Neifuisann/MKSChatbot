@@ -19,11 +19,10 @@ export default async function WorkspaceLayout({
     redirect("/login");
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("student_id, full_name")
-    .eq("user_id", user.id)
-    .maybeSingle();
+  const [{ data: profile }, { data: chatHistory }] = await Promise.all([
+    supabase.from("profiles").select("student_id, full_name").eq("user_id", user.id).maybeSingle(),
+    supabase.from("chat_sessions").select("id, title, updated_at").order("updated_at", { ascending: false }).limit(12),
+  ]);
 
   const metadataName =
     typeof user.user_metadata.full_name === "string"
@@ -41,6 +40,10 @@ export default async function WorkspaceLayout({
   return (
     <main className="flex h-dvh overflow-hidden bg-[#f7f5ef] text-[#2b332e]">
       <WorkspaceSidebar
+        chatHistory={(chatHistory ?? []).map((chat) => ({
+          id: chat.id,
+          title: chat.title,
+        }))}
         user={{
           avatarUrl,
           email: user.email,
