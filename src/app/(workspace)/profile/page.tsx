@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 import { redirect } from "next/navigation";
 
-import { AuthenticatedHeader } from "@/components/authenticated-header";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { learningFields } from "@/schemas/profile";
 import { saveProfile } from "./actions";
@@ -48,11 +47,9 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
   const isProfileLocked = Boolean(profile);
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#f7f3e9] px-5 py-5 text-[#24352d] sm:px-8 lg:px-12">
+    <section className="relative min-w-0 flex-1 overflow-y-auto bg-[#f7f5ef] px-5 py-5 text-[#24352d] sm:px-8 lg:px-12">
       <div className="pointer-events-none absolute -left-32 top-48 size-80 rounded-full bg-[#d9b5a5]/20 blur-3xl" />
       <div className="pointer-events-none absolute -right-32 top-16 size-96 rounded-full bg-[#b6cdbd]/25 blur-3xl" />
-
-      <AuthenticatedHeader user={user} />
 
       <div className="relative mx-auto grid max-w-6xl gap-8 pb-20 pt-14 lg:grid-cols-[0.72fr_1.28fr] lg:pt-20">
         <aside className="lg:pr-8">
@@ -221,6 +218,6 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
           </div>
         </section>
       </div>
-    </main>
+    </section>
   );
 }

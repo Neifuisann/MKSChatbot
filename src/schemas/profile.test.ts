@@ -4,7 +4,7 @@ import { profileSchema } from "@/schemas/profile";
 
 const validProfile = {
   studentId: "23131234",
-  fullName: "Nguyễn Văn A",
+  fullName: "Nguyễn Văn An",
   learningField: "Công nghệ thông tin",
   studentEmail: "student@hcmute.edu.vn",
 };

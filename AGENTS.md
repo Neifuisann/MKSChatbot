@@ -340,7 +340,38 @@ If a command fails, fix the underlying issue. Do not silence errors by deleting 
 
 ---
 
-## 13. Initial implementation checklist
+## 13. Frontend requirements and design philosophy
+
+### Philosophy
+
+- The interface should feel calm, focused, warm, and school-service oriented.
+- Prefer clarity and familiarity over decorative novelty.
+- Use restrained motion and visual effects. Animation must communicate state or improve orientation.
+- Keep important actions obvious and reduce unnecessary choices.
+- Design responsive interfaces from the start, including narrow mobile screens.
+
+### Consistency
+
+- Reuse existing shared components, layouts, spacing, colors, typography, and interaction patterns before creating new ones.
+- Authenticated workspace pages must use the shared workspace layout and `WorkspaceSidebar`.
+- Keep the left toolbar persistent while navigating between authenticated workspace pages.
+- Show route loading states only in the center content area. Use the shared simple spinner; do not replace or cover the toolbar.
+- Use the established workspace background `#f7f5ef` and sidebar background `#eeece6` unless a human explicitly approves a new visual direction.
+- Preserve the existing warm neutral palette, orange accent, green action color, rounded controls, and subtle borders.
+- A navigation item must visibly indicate the active route.
+- New pages must look like part of the existing product, not standalone demos.
+
+### Component behavior
+
+- Use semantic HTML and accessible labels for icon-only buttons, dialogs, navigation, loading states, and forms.
+- Provide clear loading, empty, success, and error states for data-driven interfaces.
+- Keep loading indicators simple and non-blocking. Avoid elaborate loading animations.
+- Prefer shared components over duplicated page-specific versions.
+- Keep client components focused on interaction; use Server Components for authentication and initial server data where appropriate.
+
+---
+
+## 14. Initial implementation checklist
 
 When initializing the project, complete these steps in order:
 
@@ -369,7 +400,7 @@ When initializing the project, complete these steps in order:
 
 ---
 
-## 14. Definition of done for MVP foundation
+## 15. Definition of done for MVP foundation
 
 The foundation is done when:
 
@@ -387,7 +418,7 @@ The foundation is done when:
 
 ---
 
-## 15. Things not to do in the initial version
+## 16. Things not to do in the initial version
 
 Do not implement these unless explicitly requested:
 
@@ -401,7 +432,7 @@ Do not implement these unless explicitly requested:
 
 ---
 
-## 16. Human handoff behavior
+## 17. Human handoff behavior
 
 If the chatbot cannot answer reliably from available school sources, it should respond with:
 
@@ -410,4 +441,3 @@ If the chatbot cannot answer reliably from available school sources, it should r
 - A suggested next step such as booking an appointment, creating a support ticket, or contacting the department.
 
 Never hallucinate official school information.
-
