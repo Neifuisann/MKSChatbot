@@ -21,7 +21,8 @@ export async function requireAdmin(): Promise<AdminUser> {
   } = await supabase.auth.getUser();
 
   if (!user) redirect("/login");
-  if (user.app_metadata.role !== "admin") redirect("/chat");
+
+  // Testing mode: every authenticated user can access admin management.
 
   const { data: profile } = await supabase
     .from("profiles")

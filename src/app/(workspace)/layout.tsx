@@ -57,7 +57,7 @@ export default async function WorkspaceLayout({
         user={{
           avatarUrl,
           email: user.email,
-          isAdmin: user.app_metadata.role === "admin",
+          isAdmin: true,
           name: profile?.full_name || metadataName || user.email || "MKS Student",
           studentId: profile?.student_id,
         }}
