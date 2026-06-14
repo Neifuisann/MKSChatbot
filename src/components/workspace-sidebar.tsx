@@ -4,6 +4,7 @@ import {
   Atom,
   BookOpenText,
   ChevronLeft,
+  Gauge,
   FlaskConical,
   FolderKanban,
   LogOut,
@@ -22,6 +23,7 @@ import { ChatHistory, type ChatHistoryItem } from "@/components/chat-history";
 import { cn } from "@/lib/utils";
 
 export type WorkspaceUser = {
+  isAdmin?: boolean;
   avatarUrl?: string;
   email?: string;
   name: string;
@@ -289,6 +291,15 @@ export function WorkspaceSidebar({
                 <UserRound className="size-4" />
                 Profile
               </Link>
+              {user.isAdmin && (
+                <Link
+                  className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-[#355d4a] hover:bg-[#e5eee8]"
+                  href="/admin"
+                >
+                  <Gauge className="size-4" />
+                  Vào trang quản lý
+                </Link>
+              )}
               <form action="/auth/signout" method="post">
                 <button
                   className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-[#98513d] hover:bg-[#f5e9e3]"
